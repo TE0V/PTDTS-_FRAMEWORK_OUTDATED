@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTDTS Improved Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #4CAF50;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+        
+        .video-container {
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        #video-feed {
+            width: 100%;
+            height: auto;
+        }
+        
+        .controls {
+            background: #2a2a2a;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .status-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #333;
+            border-radius: 8px;
+        }
+        
+        .status-label {
+            color: #888;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .status-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .position {
+            color: #4CAF50;
+        }
+        
+        .velocity {
+            color: #FFC107;
+        }
+        
+        .mode {
+            color: #2196F3;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 8px;
+            background: #4CAF50;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        .pid-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1e1e1e;
+            border-radius: 8px;
+            border-left: 3px solid #4CAF50;
+        }
+        
+        .pid-info h3 {
+            margin-bottom: 10px;
+            color: #4CAF50;
+        }
+        
+        .pid-info p {
+            color: #aaa;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .chart-container {
+            margin-top: 20px;
+            background: #2a2a2a;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        #positionChart {
+            width: 100%;
+            height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 PTDTS Improved Tracking System</h1>
+        
+        <div class="main-grid">
+            <div class="video-container">
+                <img id="video-feed" src="/video_feed" alt="Video Feed">
+            </div>
+            
+            <div class="controls">
+                <div class="status-item">
+                    <div class="status-label">Position</div>
+                    <div class="status-value position" id="position">0.0°</div>
+                </div>
+                
+                <div class="status-item">
+                    <div class="status-label">Velocity</div>
+                    <div class="status-value velocity" id="velocity">0.0°/s</div>
+                </div>
+                
+                <div class="status-item">
+                    <div class="status-label">Mode</div>
+                    <div class="status-value mode" id="mode">DETECTING</div>
+                </div>
+                
+                <button onclick="goHome()">Return Home</button>
+                
+                <div class="pid-info">
+                    <h3>PID Improvements</h3>
+                    <p>• Proportional control for smooth approach<br>
+                       • Derivative damping prevents overshoot<br>
+                       • Integral term for zero steady-state error<br>
+                       • Speed shaping near target<br>
+                       • 5° tolerance zone prevents hunting</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <h3>Position Graph (Last 60 seconds)</h3>
+            <canvas id="positionChart"></canvas>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Position chart setup
+        const ctx = document.getElementById('positionChart').getContext('2d');
+        const positionData = [];
+        const timeLabels = [];
+        const maxDataPoints = 60;
+        
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: timeLabels,
+                datasets: [{
+                    label: 'Position (degrees)',
+                    data: positionData,
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        grid: {
+                            color: '#444'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: '#444'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        // Update status
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('position').textContent = data.position.toFixed(1) + '°';
+                    document.getElementById('velocity').textContent = data.velocity.toFixed(1) + '°/s';
+                    document.getElementById('mode').textContent = data.mode;
+                    
+                    // Update chart
+                    const now = new Date().toLocaleTimeString();
+                    positionData.push(data.position);
+                    timeLabels.push(now);
+                    
+                    if (positionData.length > maxDataPoints) {
+                        positionData.shift();
+                        timeLabels.shift();
+                    }
+                    
+                    chart.update('none');
+                })
+                .catch(error => console.error('Error:', error));
+        }
+        
+        // Go home
+        function goHome() {
+            fetch('/api/home')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Homing...');
+                })
+                .catch(error => console.error('Error:', error));
+        }
+        
+        // Update every 100ms
+        setInterval(updateStatus, 100);
+    </script>
+</body>
+</html>
