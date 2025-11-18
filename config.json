@@ -1,0 +1,76 @@
+{
+    "acoustic_enabled": true,
+    "acoustic_threshold": 0.6,
+    "acoustic_frequency_min": 100.0,
+    "acoustic_frequency_max": 500.0,
+    
+    "visual_enabled": true,
+    "detection_confidence": 0.5,
+    "tracking_confidence": 0.3,
+    "yolo_model": "yolo11n",
+    
+    "pan_speed_max": 1.0,
+    "tilt_speed_max": 1.0,
+    "lead_prediction_enabled": true,
+    "lead_time": 1.0,
+    
+    "remote_control_enabled": true,
+    "web_port": 5000,
+    "odas_port": 9000,
+    "zmq_port": 5555,
+    
+    "motor_config": {
+        "kp": 0.8,
+        "ki": 0.1,
+        "kd": 0.2,
+        "max_velocity": 180.0,
+        "max_acceleration": 90.0
+    },
+    
+    "servo_config": {
+        "min_angle": 0.0,
+        "max_angle": 180.0,
+        "max_velocity": 180.0,
+        "center_angle": 90.0
+    },
+    
+    "camera_config": {
+        "hq_camera": {
+            "resolution": [1920, 1080],
+            "framerate": 15,
+            "format": "RGB888",
+            "port": 1
+        },
+        "gs_camera": {
+            "resolution": [1280, 720],
+            "framerate": 60,
+            "format": "RGB888",
+            "port": 0
+        }
+    },
+    
+    "scan_patterns": {
+        "default": {
+            "type": "spiral",
+            "speed": 30,
+            "tilt_levels": [45, 90, 135]
+        },
+        "fast": {
+            "type": "continuous",
+            "speed": 60,
+            "tilt_levels": [90]
+        },
+        "thorough": {
+            "type": "grid",
+            "speed": 20,
+            "tilt_levels": [30, 60, 90, 120, 150]
+        }
+    },
+    
+    "logging": {
+        "level": "INFO",
+        "file": "/var/log/ptdts/ptdts.log",
+        "max_size": "10M",
+        "backup_count": 5
+    }
+}

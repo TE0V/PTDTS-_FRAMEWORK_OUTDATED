@@ -1,0 +1,18 @@
+{
+  "encoder_counts_per_revolution": 8640,
+  "pan_offset": 0,
+  "tilt_offset": 90,
+  "camera_fov_h": 60,
+  "camera_fov_v": 40,
+  "hq_camera_fov": {
+    "h": 60.0,
+    "v": 40.0
+  },
+  "gs_camera_fov": {
+    "h": 45.0,
+    "v": 34.0
+  },
+  "acoustic_offset": 0.0,
+  "servo_min": 0,
+  "servo_max": 180
+}

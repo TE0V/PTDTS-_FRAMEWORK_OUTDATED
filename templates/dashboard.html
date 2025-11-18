@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTDTS Advanced Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --dark: #1f2937;
+            --light: #f3f4f6;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--dark);
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .nav-menu {
+            list-style: none;
+        }
+        
+        .nav-item {
+            margin-bottom: 10px;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 15px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--dark);
+            transition: all 0.3s;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        /* Main Content */
+        .main-content {
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .system-state {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .state-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .state-indicator.scanning { background: var(--warning); }
+        .state-indicator.detecting { background: var(--primary); }
+        .state-indicator.tracking { background: var(--secondary); }
+        .state-indicator.engaging { background: var(--danger); }
+        .state-indicator.idle { background: #6b7280; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Grid Layout */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .card-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        /* Video Feed */
+        .video-container {
+            position: relative;
+            background: black;
+            border-radius: 10px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+        }
+        
+        #video-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .video-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            color: white;
+            font-size: 0.9em;
+        }
+        
+        .video-info {
+            background: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        
+        /* Position Display */
+        .position-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .position-item {
+            text-align: center;
+        }
+        
+        .position-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .position-label {
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        
+        /* Controls */
+        .control-panel {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .slider-control {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .slider {
+            -webkit-appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: var(--light);
+            outline: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        /* Target List */
+        .target-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .target-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid var(--light);
+            transition: background 0.3s;
+        }
+        
+        .target-item:hover {
+            background: var(--light);
+        }
+        
+        .target-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .target-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+        }
+        
+        .target-icon.acoustic {
+            background: #fef3c7;
+            color: var(--warning);
+        }
+        
+        .target-icon.visual {
+            background: #dbeafe;
+            color: var(--primary);
+        }
+        
+        /* Statistics */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+        }
+        
+        .stat-details {
+            flex: 1;
+        }
+        
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--dark);
+        }
+        
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9em;
+        }
+        
+        /* Radar Display */
+        #radar-canvas {
+            width: 100%;
+            height: 300px;
+        }
+        
+        /* Log Display */
+        .log-container {
+            max-height: 200px;
+            overflow-y: auto;
+            background: var(--light);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            color: #4b5563;
+        }
+        
+        .log-entry.error {
+            color: var(--danger);
+        }
+        
+        .log-entry.warning {
+            color: var(--warning);
+        }
+        
+        .log-entry.success {
+            color: var(--secondary);
+        }
+        
+        /* Radar Display Canvas */
+        #radar-display {
+            display: block;
+            margin: 0 auto;
+            background: #0a0a0a;
+            border-radius: 8px;
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fas fa-crosshairs"></i>
+                <span>PTDTS</span>
+            </div>
+            
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="#" class="nav-link active" data-page="overview">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Overview</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-page="control">
+                            <i class="fas fa-gamepad"></i>
+                            <span>Control</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-page="targets">
+                            <i class="fas fa-bullseye"></i>
+                            <span>Targets</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-page="analytics">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Analytics</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-page="settings">
+                            <i class="fas fa-cog"></i>
+                            <span>Settings</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="system-state">
+                    <span class="state-indicator idle" id="state-indicator"></span>
+                    <span id="state-text">IDLE</span>
+                </div>
+                
+                <div class="header-actions">
+                    <button class="btn btn-danger" onclick="emergencyStop()">
+                        <i class="fas fa-stop"></i> EMERGENCY STOP
+                    </button>
+                </div>
+            </header>
+            
+            <!-- Dashboard Grid -->
+            <div class="grid-container">
+                <!-- Video Feed -->
+                <div class="card" style="grid-column: span 2;">
+                    <div class="card-header">
+                        <h3 class="card-title">Live Feed</h3>
+                        <div>
+                            <span id="camera-mode">Detection Mode</span>
+                        </div>
+                    </div>
+                    <div class="video-container">
+                        <img id="video-feed" src="/video_feed" alt="Video Feed">
+                        <div class="video-overlay">
+                            <div class="video-info">FPS: <span id="fps">0</span></div>
+                            <div class="video-info">Targets: <span id="target-count">0</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Camera Control -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Camera Control</h3>
+                    </div>
+                    <div class="control-panel">
+                        <div class="button-group">
+                            <button class="btn btn-primary" onclick="setCameraMode('hq')">HQ Camera</button>
+                            <button class="btn btn-primary" onclick="setCameraMode('gs')">GS Camera</button>
+                            <button class="btn btn-secondary" onclick="toggleManualMode()">
+                                Manual Mode: <span id="manual-mode">OFF</span>
+                            </button>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <small>Current: <span id="current-camera">HQ</span> | 
+                                   Mode: <span id="camera-mode-status">AUTO</span></small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Position Display -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Current Position</h3>
+                    </div>
+                    <div class="position-display">
+                        <div class="position-item">
+                            <div class="position-value" id="pan-position">0°</div>
+                            <div class="position-label">Pan Angle</div>
+                        </div>
+                        <div class="position-item">
+                            <div class="position-value" id="tilt-position">90°</div>
+                            <div class="position-label">Tilt Angle</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Radar Display -->
+                <div class="card" style="grid-column: span 3;">
+                    <div class="card-header">
+                        <h3 class="card-title">Radar View</h3>
+                    </div>
+                    <canvas id="radar-display" width="600" height="600"></canvas>
+                </div>
+                
+                <!-- Statistics -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Statistics</h3>
+                    </div>
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <div class="stat-icon" style="background: #dbeafe; color: var(--primary);">
+                                <i class="fas fa-eye"></i>
+                            </div>
+                            <div class="stat-details">
+                                <div class="stat-value" id="visual-detections">0</div>
+                                <div class="stat-label">Visual Detections</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-icon" style="background: #fef3c7; color: var(--warning);">
+                                <i class="fas fa-volume-up"></i>
+                            </div>
+                            <div class="stat-details">
+                                <div class="stat-value" id="acoustic-detections">0</div>
+                                <div class="stat-label">Acoustic Detections</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-icon" style="background: #d1fae5; color: var(--secondary);">
+                                <i class="fas fa-crosshairs"></i>
+                            </div>
+                            <div class="stat-details">
+                                <div class="stat-value" id="tracking-time">0s</div>
+                                <div class="stat-label">Tracking Time</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-icon" style="background: #fce7f3; color: #ec4899;">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-details">
+                                <div class="stat-value" id="uptime">0h</div>
+                                <div class="stat-label">System Uptime</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Manual Control -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Manual Control</h3>
+                    </div>
+                    <div class="control-panel">
+                        <div class="slider-control">
+                            <div class="slider-header">
+                                <span>Pan</span>
+                                <span id="pan-value">0°</span>
+                            </div>
+                            <input type="range" class="slider" id="pan-slider" min="0" max="360" value="0">
+                        </div>
+                        <div class="slider-control">
+                            <div class="slider-header">
+                                <span>Tilt</span>
+                                <span id="tilt-value">90°</span>
+                            </div>
+                            <input type="range" class="slider" id="tilt-slider" min="0" max="180" value="90">
+                        </div>
+                        <div class="button-group">
+                            <button class="btn btn-primary" onclick="setPosition()">Set Position</button>
+                            <button class="btn btn-secondary" onclick="goHome()">Home</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- System Control -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">System Control</h3>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="setState('SCANNING')">
+                            <i class="fas fa-radar"></i> Scan
+                        </button>
+                        <button class="btn btn-primary" onclick="setState('DETECTING')">
+                            <i class="fas fa-search"></i> Detect
+                        </button>
+                        <button class="btn btn-secondary" onclick="setState('TRACKING')">
+                            <i class="fas fa-crosshairs"></i> Track
+                        </button>
+                        <button class="btn btn-danger" onclick="setState('IDLE')">
+                            <i class="fas fa-pause"></i> Idle
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Target List -->
+                <div class="card" style="grid-column: span 2;">
+                    <div class="card-header">
+                        <h3 class="card-title">Active Targets</h3>
+                        <button class="btn btn-primary" onclick="refreshTargets()">
+                            <i class="fas fa-sync"></i>
+                        </button>
+                    </div>
+                    <div class="target-list" id="target-list">
+                        <div class="target-item">
+                            <div class="target-info">
+                                <div class="target-icon acoustic">
+                                    <i class="fas fa-volume-up"></i>
+                                </div>
+                                <div>
+                                    <div>No targets detected</div>
+                                    <small>System is idle</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- System Log -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">System Log</h3>
+                    </div>
+                    <div class="log-container" id="log-container">
+                        <div class="log-entry">System initialized</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        // WebSocket connection
+        const socket = io();
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            connectWebSocket();
+            setupEventListeners();
+            updateStatus();
+        });
+        
+        function connectWebSocket() {
+            socket.on('connect', () => {
+                addLog('Connected to server', 'success');
+            });
+            
+            socket.on('disconnect', () => {
+                addLog('Disconnected from server', 'error');
+            });
+            
+            socket.on('status_update', (data) => {
+                updateDashboard(data);
+            });
+        }
+        
+        function setupEventListeners() {
+            // Pan slider
+            document.getElementById('pan-slider').addEventListener('input', (e) => {
+                document.getElementById('pan-value').textContent = e.target.value + '°';
+            });
+            
+            // Tilt slider
+            document.getElementById('tilt-slider').addEventListener('input', (e) => {
+                document.getElementById('tilt-value').textContent = e.target.value + '°';
+            });
+            
+            // Navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                });
+            });
+        }
+        
+        function updateDashboard(data) {
+            // Update state indicator
+            const indicator = document.getElementById('state-indicator');
+            const stateText = document.getElementById('state-text');
+            
+            indicator.className = 'state-indicator ' + data.state.toLowerCase();
+            stateText.textContent = data.state;
+            
+            // Update position
+            document.getElementById('pan-position').textContent = 
+                Math.round(data.pan_angle) + '°';
+            document.getElementById('tilt-position').textContent = 
+                Math.round(data.tilt_angle) + '°';
+            
+            // Update statistics
+            if (data.stats) {
+                document.getElementById('visual-detections').textContent = 
+                    data.stats.detections_visual || 0;
+                document.getElementById('acoustic-detections').textContent = 
+                    data.stats.detections_acoustic || 0;
+                document.getElementById('tracking-time').textContent = 
+                    Math.round(data.stats.tracking_time || 0) + 's';
+                
+                const uptime = data.uptime || 0;
+                const hours = Math.floor(uptime / 3600);
+                const minutes = Math.floor((uptime % 3600) / 60);
+                document.getElementById('uptime').textContent = 
+                    hours + 'h ' + minutes + 'm';
+            }
+            
+            // Update target count
+            document.getElementById('target-count').textContent = data.targets || 0;
+        }
+        
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => updateDashboard(data))
+                .catch(error => console.error('Error:', error));
+        }
+        
+        function setPosition() {
+            const pan = document.getElementById('pan-slider').value;
+            const tilt = document.getElementById('tilt-slider').value;
+            
+            fetch(`/api/control/pan/${pan}`)
+                .then(() => fetch(`/api/control/tilt/${tilt}`))
+                .then(() => {
+                    addLog(`Position set: Pan ${pan}°, Tilt ${tilt}°`, 'success');
+                })
+                .catch(error => addLog('Error setting position', 'error'));
+        }
+        
+        function goHome() {
+            fetch(`/api/control/pan/0`)
+                .then(() => fetch(`/api/control/tilt/90`))
+                .then(() => {
+                    document.getElementById('pan-slider').value = 0;
+                    document.getElementById('tilt-slider').value = 90;
+                    document.getElementById('pan-value').textContent = '0°';
+                    document.getElementById('tilt-value').textContent = '90°';
+                    addLog('Returned to home position', 'success');
+                })
+                .catch(error => addLog('Error going home', 'error'));
+        }
+        
+        function setState(state) {
+            fetch(`/api/control/state/${state}`)
+                .then(response => response.json())
+                .then(data => {
+                    addLog(`State changed to ${state}`, 'success');
+                })
+                .catch(error => addLog('Error changing state', 'error'));
+        }
+        
+        function emergencyStop() {
+            setState('IDLE');
+            addLog('EMERGENCY STOP ACTIVATED', 'error');
+        }
+        
+        function refreshTargets() {
+            fetch('/api/targets')
+                .then(response => response.json())
+                .then(targets => {
+                    const list = document.getElementById('target-list');
+                    
+                    if (targets.length === 0) {
+                        list.innerHTML = `
+                            <div class="target-item">
+                                <div class="target-info">
+                                    <div class="target-icon acoustic">
+                                        <i class="fas fa-volume-up"></i>
+                                    </div>
+                                    <div>
+                                        <div>No targets detected</div>
+                                        <small>System is scanning</small>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        list.innerHTML = targets.map(target => `
+                            <div class="target-item">
+                                <div class="target-info">
+                                    <div class="target-icon ${target.source.toLowerCase()}">
+                                        <i class="fas fa-${target.source === 'ACOUSTIC' ? 'volume-up' : 'eye'}"></i>
+                                    </div>
+                                    <div>
+                                        <div>Target ${target.id.substring(0, 8)}</div>
+                                        <small>Confidence: ${(target.confidence * 100).toFixed(0)}%</small>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary" onclick="trackTarget('${target.id}')">
+                                    Track
+                                </button>
+                            </div>
+                        `).join('');
+                    }
+                })
+                .catch(error => addLog('Error loading targets', 'error'));
+        }
+        
+        function trackTarget(targetId) {
+            // TODO: Implement target tracking
+            addLog(`Tracking target ${targetId}`, 'success');
+        }
+        
+        function addLog(message, type = '') {
+            const container = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            
+            container.insertBefore(entry, container.firstChild);
+            
+            // Keep only last 10 entries
+            while (container.children.length > 10) {
+                container.removeChild(container.lastChild);
+            }
+        }
+        
+        // Status update interval
+        setInterval(updateStatus, 1000);
+        
+        // Refresh targets periodically
+        setInterval(refreshTargets, 5000);
+        
+        // Camera control
+        let manualCameraMode = false;
+
+        function setCameraMode(mode) {
+            fetch(`/api/camera/mode/${mode}?manual=${manualCameraMode}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('current-camera').textContent = mode.toUpperCase();
+                    addLog(`Camera switched to ${mode.toUpperCase()}`, 'success');
+                });
+        }
+
+        function toggleManualMode() {
+            manualCameraMode = !manualCameraMode;
+            document.getElementById('manual-mode').textContent = manualCameraMode ? 'ON' : 'OFF';
+            document.getElementById('camera-mode-status').textContent = manualCameraMode ? 'MANUAL' : 'AUTO';
+            addLog(`Camera control: ${manualCameraMode ? 'Manual' : 'Auto'}`, 'success');
+        }
+
+        // Top-down radar display
+        class RadarDisplay {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.range = 100; // meters
+                this.targets = [];
+                this.systemHeading = 0;
+                
+                this.setupCanvas();
+                this.startUpdates();
+            }
+            
+            setupCanvas() {
+                // Set canvas size
+                this.centerX = this.canvas.width / 2;
+                this.centerY = this.canvas.height / 2;
+                this.radius = Math.min(this.centerX, this.centerY) - 20;
+            }
+            
+            draw() {
+                // Clear canvas
+                this.ctx.fillStyle = '#0a0a0a';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw grid
+                this.drawGrid();
+                
+                // Draw range rings
+                this.drawRangeRings();
+                
+                // Draw compass
+                this.drawCompass();
+                
+                // Draw targets
+                this.drawTargets();
+                
+                // Draw system direction indicator
+                this.drawSystemHeading();
+            }
+            
+            drawGrid() {
+                this.ctx.strokeStyle = '#1a3a1a';
+                this.ctx.lineWidth = 1;
+                
+                // Horizontal line
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.centerX - this.radius, this.centerY);
+                this.ctx.lineTo(this.centerX + this.radius, this.centerY);
+                this.ctx.stroke();
+                
+                // Vertical line
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.centerX, this.centerY - this.radius);
+                this.ctx.lineTo(this.centerX, this.centerY + this.radius);
+                this.ctx.stroke();
+            }
+            
+            drawRangeRings() {
+                this.ctx.strokeStyle = '#1a3a1a';
+                this.ctx.lineWidth = 1;
+                
+                for (let i = 1; i <= 4; i++) {
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.centerX, this.centerY, (this.radius / 4) * i, 0, 2 * Math.PI);
+                    this.ctx.stroke();
+                }
+                
+                // Range labels
+                this.ctx.fillStyle = '#4a4a4a';
+                this.ctx.font = '12px monospace';
+                for (let i = 1; i <= 4; i++) {
+                    const range = (this.range / 4) * i;
+                    this.ctx.fillText(`${range}m`, this.centerX + 5, this.centerY - (this.radius / 4) * i);
+                }
+            }
+            
+            drawCompass() {
+                this.ctx.fillStyle = '#6a6a6a';
+                this.ctx.font = '14px monospace';
+                
+                // Cardinal directions
+                this.ctx.fillText('N', this.centerX - 5, this.centerY - this.radius - 5);
+                this.ctx.fillText('E', this.centerX + this.radius + 5, this.centerY + 5);
+                this.ctx.fillText('S', this.centerX - 5, this.centerY + this.radius + 15);
+                this.ctx.fillText('W', this.centerX - this.radius - 15, this.centerY + 5);
+            }
+            
+            drawTargets() {
+                this.targets.forEach(target => {
+                    // Convert position to radar coordinates
+                    const scale = this.radius / this.range;
+                    const x = this.centerX + target.x * scale;
+                    const y = this.centerY - target.y * scale; // Flip Y axis
+                    
+                    // Draw target
+                    this.ctx.fillStyle = '#ff4444';
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                    this.ctx.fill();
+                    
+                    // Draw velocity vector
+                    if (target.speed > 0.5) {
+                        const vectorLength = Math.min(target.speed * 5, 30);
+                        const endX = x + Math.sin(target.heading * Math.PI / 180) * vectorLength;
+                        const endY = y - Math.cos(target.heading * Math.PI / 180) * vectorLength;
+                        
+                        this.ctx.strokeStyle = '#ff8844';
+                        this.ctx.lineWidth = 2;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x, y);
+                        this.ctx.lineTo(endX, endY);
+                        this.ctx.stroke();
+                    }
+                    
+                    // Draw target ID
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.font = '10px monospace';
+                    this.ctx.fillText(target.id.substring(0, 6), x + 8, y - 8);
+                });
+            }
+            
+            drawSystemHeading() {
+                // Draw current pan angle indicator
+                const angle = this.systemHeading * Math.PI / 180;
+                const lineLength = this.radius - 10;
+                
+                this.ctx.strokeStyle = '#44ff44';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.centerX, this.centerY);
+                this.ctx.lineTo(
+                    this.centerX + Math.sin(angle) * lineLength,
+                    this.centerY - Math.cos(angle) * lineLength
+                );
+                this.ctx.stroke();
+                
+                // Center point
+                this.ctx.fillStyle = '#44ff44';
+                this.ctx.beginPath();
+                this.ctx.arc(this.centerX, this.centerY, 3, 0, 2 * Math.PI);
+                this.ctx.fill();
+            }
+            
+            updateData(data) {
+                this.targets = data.targets || [];
+                this.systemHeading = data.system_heading || 0;
+                this.draw();
+            }
+            
+            startUpdates() {
+                // Update radar every 500ms
+                setInterval(() => {
+                    fetch('/api/radar/data')
+                        .then(response => response.json())
+                        .then(data => this.updateData(data))
+                        .catch(error => console.error('Radar update error:', error));
+                }, 500);
+                
+                // Initial draw
+                this.draw();
+            }
+        }
+
+        // Initialize radar on page load
+        let radarDisplay;
+        document.addEventListener('DOMContentLoaded', () => {
+            radarDisplay = new RadarDisplay('radar-display');
+        });
+    </script>
+</body>
+</html>

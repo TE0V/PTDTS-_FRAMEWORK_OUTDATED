@@ -1,0 +1,52 @@
+# PTDTS Requirements for Raspberry Pi 5 - Python 3.13
+# Note: numpy, scipy, matplotlib, pandas installed via apt (system packages)
+
+# Core System
+flask==2.3.3
+flask-cors==4.0.0
+flask-socketio==5.3.4
+python-socketio==5.9.0
+
+# GPIO Control (Pi 5 compatible)
+gpiozero==2.0
+lgpio==0.2.2
+
+# Computer Vision and AI
+opencv-python
+ultralytics
+
+# Scientific Computing (installed via apt: python3-numpy python3-scipy python3-pandas python3-matplotlib)
+# numpy>=1.26.0
+# scipy>=1.11.0
+# pandas>=2.0.0
+# matplotlib>=3.7.0
+scikit-learn
+
+# Kalman Filtering
+filterpy
+
+# Audio Processing
+pyaudio
+librosa
+sounddevice
+
+# Networking
+pyzmq
+requests
+websocket-client
+
+# Data Processing (handled by apt)
+# See python3-pandas above
+
+# System Utilities
+psutil
+pyyaml
+jsonschema
+
+# Logging
+colorlog
+python-dotenv
+
+# Testing
+pytest
+pytest-cov

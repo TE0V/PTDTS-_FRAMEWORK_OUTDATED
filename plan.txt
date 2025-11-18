@@ -1,0 +1,20 @@
+DC motor (PAN):
+    -given continuous input according to DRV8874 specs
+    -angle given by encoder should used primarily for calculations, not as a position
+    command for the motor, (i.e. the dc motor should be built around the action of
+    first panning to an angle given the encoder steps, but after that it should not be 
+    bound by angle but instead try to constantly center the camera on object).
+    - For calibration, the system should be turned manually to calculate the exact
+    number of steps
+Servo (tilt): considering the servo is not currently functional, this featurset will
+    be skipped for now.
+High Quality Camera (Picamera2(1)): Primary purpose is initial detection. For the sake of the 
+    demo, it is also the primary tracking camera. As such, it will be run at as high a 
+    framerate as is possible given the raspberry pi constraints. Resolution is 
+    inconsequenctial for this demo
+Yolo: Main preformance constrain. I will be using NCNN model format given it's steller increase in preformance.
+    - THE MOST IMPORTANT OUTCOME of this system is it's ability to track movement in real time, this should come before all.
+GUI: web based gui is to contain video output with yolo overlay (center crosshair with line drawn too calculated center of detection box)
+    - It should also include an overlay of the calculated angle from center given by the encoder.
+    - It should include a manual override for the motor with subsequent live control over the system using the arrow keys
+    -  
